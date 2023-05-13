@@ -40,29 +40,31 @@ from enum import Enum
 intents = discord.Intents.all() 
 client = discord.Client(intents=intents)
 tree = discord.app_commands.CommandTree(client)
-
-game_state = None
 class Phase(Enum):
     Join = 1
     Answer = 2
     Vote = 3
 
+game_state = {
+        "phase": Phase.Join,
+        "player_count": 0,
+        "players": {}, # nickname -> player_name
+        "current_turn": 0,
+        "current_votes": defaultdict(int), # nickname -> vote_count
+        "player_followups": {}, # nickname -> followup
+        "voted_set": set(),
+        "game_definition": "this is a simple game",
+        "game_question": "this is a simple question",
+        "game_answers": {}, # nickname, answer
+        "order_list": [],
+        "cur_idx": 0
+    }
+
+
 @client.event
 async def on_ready():
     await tree.sync()
     print("ready")
-
-# make the slash command
-@tree.command(name="dm", description="description")
-async def dm(interaction: discord.Interaction, msg: str):
-    await interaction.response.send_message(msg, ephemeral=True)
-
-
-@tree.command(name="pm", description="description")
-async def pm(interaction: discord.Interaction, msg: str):
-    await interaction.response.send_message(msg, ephemeral=False)
-
-
 
 @tree.command(name="init", description="description")
 async def init(interaction: discord.Interaction):
@@ -87,6 +89,9 @@ async def init(interaction: discord.Interaction):
 @tree.command(name="join", description="description")
 async def join(interaction: discord.Interaction):
     global game_state
+    if game_state['phase'] != Phase.Join:
+        await interaction.response.send_message("Currently is not the phase of the joining", ephemeral=True)
+        return
     player_id = game_state["player_count"]
     await interaction.response.send_message("you are user {}".format(player_id), ephemeral=True)
     await interaction.channel.send("user {} joined the game".format(player_id))
@@ -100,6 +105,9 @@ async def join(interaction: discord.Interaction):
 @tree.command(name="start_game", description="description")
 async def start_game(interaction: discord.Interaction):
     global game_state
+    if game_state['phase'] != Phase.Join:
+        await interaction.response.send_message("Currently is not the phase of the answering", ephemeral=True)
+        return
     # game definition: ...
     # round 1, question: ...
     # user 1: your turn
@@ -116,6 +124,10 @@ async def start_game(interaction: discord.Interaction):
 @tree.command(name="ans", description="description")
 async def ans(interaction: discord.Interaction, answer: str):
     global game_state
+
+    if game_state['phase'] != Phase.Answer:
+        await interaction.response.send_message("Currently is not the phase of the answering", ephemeral=True)
+        return
 
     cur_player = game_state["order_list"][game_state["cur_idx"]]
     if game_state["players"][cur_player] != interaction.user.name:
@@ -136,13 +148,17 @@ async def ans(interaction: discord.Interaction, answer: str):
         await interaction.channel.send("I have collected all the answers, let start voting.")
         return
 
-    await game_state["player_followups"][cur_player].send("It's your turn", ephemeral=True)
+    next_player = game_state["order_list"][game_state["cur_idx"]]
+    await game_state["player_followups"][next_player].send("It's your turn", ephemeral=True)
     
 
 
 @tree.command(name="vote", description="description")
 async def vote(interaction: discord.Interaction, nickname: str):
     global game_state
+    if game_state['phase'] != Phase.Vote:
+        await interaction.response.send_message("Currently is not the phase of the voting", ephemeral=True)
+        return
     # /vote nickname: vote the user of the nickname as the AI
     if nickname not in game_state['players']:
         await interaction.response.send_message("This player has been kicked out or doesn't exist.", ephemeral=True)
@@ -158,5 +174,5 @@ async def vote(interaction: discord.Interaction, nickname: str):
     await interaction.response.send_message("Thank you for the voting", ephemeral=True)
     
 
-TOKEN = 'MTEwNjk2MTY0NjQ1NjQxODM3NQ.GYuP80.v_paJaZBfHQN8vE42iEwzqGBd7onvT5kWwtqfI'
+TOKEN = ''
 client.run(TOKEN)

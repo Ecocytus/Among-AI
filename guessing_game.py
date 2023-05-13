@@ -41,7 +41,6 @@ intents = discord.Intents.all()
 client = discord.Client(intents=intents)
 tree = discord.app_commands.CommandTree(client)
 
-channel = None
 game_state = None
 class Phase(Enum):
     Join = 1
@@ -68,8 +67,6 @@ async def pm(interaction: discord.Interaction, msg: str):
 @tree.command(name="init", description="description")
 async def init(interaction: discord.Interaction):
     global game_state
-    global channel
-    channel = interaction.channel
     game_state = {
         "phase": Phase.Join,
         "player_count": 0,
@@ -81,7 +78,8 @@ async def init(interaction: discord.Interaction):
         "game_definition": "this is a simple game",
         "game_question": "this is a simple question",
         "game_answers": {}, # nickname, answer
-        "order_list": []
+        "order_list": [],
+        "cur_idx": 0
     }
     await interaction.response.send_message("game initialized", ephemeral=False)
 
@@ -91,7 +89,7 @@ async def join(interaction: discord.Interaction):
     global game_state
     player_id = game_state["player_count"]
     await interaction.response.send_message("you are user {}".format(player_id), ephemeral=True)
-    await channel.send("user {} joined the game".format(player_id))
+    await interaction.channel.send("user {} joined the game".format(player_id))
     # TODO: change to random name
     game_state["players"][str(player_id)] = interaction.user.name
     game_state["game_answers"][str(player_id)] = ""
@@ -102,39 +100,49 @@ async def join(interaction: discord.Interaction):
 @tree.command(name="start_game", description="description")
 async def start_game(interaction: discord.Interaction):
     global game_state
-    global channel
     # game definition: ...
     # round 1, question: ...
     # user 1: your turn
     game_state['phase'] = Phase.Answer
-    await channel.send(game_state["game_definition"])
-    await channel.send(game_state["game_question"])
+    await interaction.channel.send(game_state["game_definition"])
+    await interaction.channel.send(game_state["game_question"])
     tmp = list(game_state["players"].keys())
     shuffle(tmp)
     game_state["order_list"] = tmp
-    await interaction.response.send_message("user [i], your turn")
-    await game_state["player_followups"][game_state["order_list"][0]].send("It's your turn", ephemeral=True)
-    # def is_valid_reply(m):
-    #     if m.content == 'harmful':
-    #         return False
-    #     return True
-    # ans = await client.wait_for('message', check=is_valid_reply)
-    # print(ans)
-    # game_state['phase'] = Phase.Vote
+    cur_player = game_state["order_list"][game_state["cur_idx"]]
+    await interaction.response.send_message("{}, it's your turn".format(cur_player))
+    await game_state["player_followups"][cur_player].send("It's your turn", ephemeral=True)
 
-# @tree.command(name="ans", description="description")
-# async def ans(interaction: discord.Interaction, nickname: str):
-#     global game_state
-#     global channel
+@tree.command(name="ans", description="description")
+async def ans(interaction: discord.Interaction, answer: str):
+    global game_state
 
-#     await interaction.response.send_message("user [i], your turn")
+    cur_player = game_state["order_list"][game_state["cur_idx"]]
+    if game_state["players"][cur_player] != interaction.user.name:
+        await interaction.response.send_message("It's not your turn", ephemeral=True)
+        return
+    
+    game_state["cur_idx"] += 1
+
+    # Change to the superviosr AI answer this, also check if the answer is harmful or not
+    await interaction.response.send_message("Sounds intersting!", ephemeral=True)
+    await interaction.channel.send("{} give answer: {}".format(cur_player, answer))
+    game_state["game_answers"][cur_player] = ans
+    # TODO: format ans print the summary of all previous answerss
+
+    if game_state["cur_idx"] == len(game_state["players"]):
+        # end answering, start voting
+        game_state['phase'] = Phase.Vote
+        await interaction.channel.send("I have collected all the answers, let start voting.")
+        return
+
+    await game_state["player_followups"][cur_player].send("It's your turn", ephemeral=True)
     
 
 
 @tree.command(name="vote", description="description")
 async def vote(interaction: discord.Interaction, nickname: str):
     global game_state
-    global channel
     # /vote nickname: vote the user of the nickname as the AI
     if nickname not in game_state['players']:
         await interaction.response.send_message("This player has been kicked out or doesn't exist.", ephemeral=True)
@@ -146,9 +154,9 @@ async def vote(interaction: discord.Interaction, nickname: str):
     game_state["current_votes"][nickname] += 1
     if len(game_state["voted_set"]) == len(game_state["players"]):
         # finish
-        await channel.send("Vote ended, {} get the most vote".format(max(game_state["current_votes"], key=game_state["current_votes"].get)))
+        await interaction.channel.send("Vote ended, {} get the most vote".format(max(game_state["current_votes"], key=game_state["current_votes"].get)))
     await interaction.response.send_message("Thank you for the voting", ephemeral=True)
     
 
-TOKEN = ''
+TOKEN = 'MTEwNjk2MTY0NjQ1NjQxODM3NQ.GYuP80.v_paJaZBfHQN8vE42iEwzqGBd7onvT5kWwtqfI'
 client.run(TOKEN)

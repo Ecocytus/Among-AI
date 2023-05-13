@@ -12,13 +12,13 @@ async def on_ready():
 
 # make the slash command
 @tree.command(name="dm", description="description")
-async def dm(interaction: discord.Interaction, msg: str):    
+async def dm(interaction: discord.Interaction, msg: str):
     await interaction.response.send_message(msg, ephemeral=True)
 
 
 @tree.command(name="pm", description="description")
-async def pm(interaction: discord.Interaction, msg: str):    
-    await interaction.response.send_message(msg, "command")
+async def pm(interaction: discord.Interaction, msg: str):
+    await interaction.response.send_message(msg, ephemeral=True)
 
-TOKEN = ''
+TOKEN = 'MTEwNjk2MTY0NjQ1NjQxODM3NQ.GbHXXF.9A5p3Mx3miupE9qMjYnSZc4s9TwrvjiZnGvPlM'
 client.run(TOKEN)

@@ -120,6 +120,7 @@ async def notifyNextToAns(interaction: discord.Interaction):
             game_state['phase'] = Phase.Vote
             await interaction.channel.send("I have collected all the answers, let's start voting.")
             print(game_state["game_answers"])
+            await show_answers(interaction)
             return
 
 @tree.command(name="start_game", description="description")
@@ -166,7 +167,6 @@ async def ans(interaction: discord.Interaction, answer: str):
         await interaction.channel.send("{} give answer: {}".format(cur_player, answer))
         game_state["game_answers"][cur_player] = answer
         # TODO: format ans print the summary of all previous answerss
-        await show_answers(interaction)
 
     await notifyNextToAns(interaction)
     
@@ -206,8 +206,6 @@ async def show_answers(interaction: discord.Interaction):
     )
 
     embed.add_field(name="Question", value=game_state["game_question"], inline=False)
-
-    embed.add_field(name="\u200b", value="\u200b", inline=False)
 
     # Add each user's answer to the Embed
     for user, answer in users_answers.items():

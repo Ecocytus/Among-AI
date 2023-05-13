@@ -1,8 +1,20 @@
 # define your keys here
-from secret import discord_token, openai_org, openai_key, claude_key
+from secret import openai_org, openai_key, claude_key
 
 import openai
 import anthropic
+
+import asyncio
+from functools import wraps, partial
+
+def async_wrap(func):
+    @wraps(func)
+    async def run(*args, loop=None, executor=None, **kwargs):
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        pfunc = partial(func, *args, **kwargs)
+        return await loop.run_in_executor(executor, pfunc)
+    return run
 
 class Hacker:
     def __init__(self, game_definition: str):
@@ -26,12 +38,27 @@ class Hacker:
         print("[ans prompt]\n" + ans_prompt + "\n[ans answer]\n" + ans_answer)
         return ans_answer
 
+    def complete(self, input: str, analysis_prompt: str, ans_prompt: str):
+        analysis_answer = self.analysis(input, analysis_prompt)
+        ans_answer = self.ans(input + "\nYou:", ans_prompt)
+        return ans_answer
+    
+    async def async_analysis(self, input: str, prompt: str):
+        return await async_wrap(self.analysis)(input, prompt)
+
+    async def async_ans(self, input: str, prompt: str):
+        return await async_wrap(self.ans)(input, prompt)
+
+    async def __call__(self, input: str, analysis_prompt: str, ans_prompt: str):
+        await self.async_analysis(input, analysis_prompt)
+        return await self.async_ans(input, ans_prompt)
+        # return await async_wrap(self.complete)(input, analysis_prompt, ans_prompt)
 
 class OpenAI(Hacker):
-    def __init__(self, game_definition, org, api_key):
+    def __init__(self, game_definition):
         super().__init__(game_definition)
-        openai.org = org
-        openai.api_key = api_key
+        openai.org = openai_org
+        openai.api_key = openai_key
         
     def call(self, prompt):
         response = openai.Completion.create(
@@ -46,11 +73,10 @@ class OpenAI(Hacker):
         answer = response.choices[0].text.strip()
         return answer
 
-
 class Claude(Hacker):
-    def __init__(self, game_definition, api_key):
+    def __init__(self, game_definition):
         super().__init__(game_definition)
-        self.client = anthropic.Client(api_key)
+        self.client = anthropic.Client(claude_key)
         
     def call(self, prompt):
         prompt = '\n\nHuman: ${prompt}\n\nAssistant:'
@@ -60,25 +86,3 @@ class Claude(Hacker):
             max_tokens_to_sample=50,
         )
         return response['completion'].strip()
-
-ai_name = 'claude'
-game_definition = "You are in a game that chats with each other in rounds. \
-    In each round, you will be asked to write one sentence answer, within 2\
-        0 tokens. There are other gamers in the chatroom; you must prevent \
-            yourself from being recognized as a language model. You will be\
-                given the answers of other players first, so you should fol\
-                    low their wording style, token length, and content to w\
-                        in the game."
-input = "Question: what did you eat yesterday?\nPerson 1: I eat nothing.\nPerson 2: I eat 100 hamburgers."
-analysis_prompt = "Firstly, analyze the person's personality above and their wording style."
-ans_prompt = "Continue the conversation. You want to mimic others' personali\
-    ties and wording styles to hide the nature that you are an AI. Do not r\
-        eply with other uncorrelated information."
-if ai_name == 'gpt':
-    model = OpenAI(game_definition, openai_org, openai_key)
-elif ai_name == 'claude':
-    model = Claude(game_definition, claude_key)
-breakpoint()
-model.analysis(input, analysis_prompt)
-breakpoint()
-model.ans(input + "\nYou:", ans_prompt)

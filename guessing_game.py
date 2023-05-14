@@ -202,7 +202,7 @@ async def show_ans(interaction: discord.Interaction):
             await interaction.response.send_message("No answers avaiable right now", ephemeral=True)
             return
         embed =  get_answers()
-        await interaction.response.send_message(embed, ephemeral=True)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 def get_answers():
     # Assuming you have a dictionary of users and answers
@@ -210,8 +210,7 @@ def get_answers():
 
     # Create an Embed
     embed = discord.Embed(
-        title = 'Question Answers',
-        description = 'These are the answers for the question.',
+        title = 'Summary',
         color = discord.Color.blue() # You can customize the color
     )
 

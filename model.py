@@ -78,6 +78,25 @@ class OpenAI(Hacker):
         answer = response.choices[0].text.strip()
         return answer
 
+class GPT(Hacker):
+    def __init__(self, game_definition):
+        super().__init__(game_definition)
+        openai.org = openai_org
+        openai.api_key = openai_key
+        
+    def call(self, prompt, internal=False):
+        response = openai.ChatCompletion.create(
+            engine="gpt-4",
+            prompt=prompt,
+            max_tokens=150,
+            temperature=1,
+            top_p=1,
+            n=1,
+            stop=None,
+        )
+        answer = response.choices[0].text.strip()
+        return answer
+
 class Claude1_3(Hacker):
     def __init__(self, game_definition):
         super().__init__(game_definition)

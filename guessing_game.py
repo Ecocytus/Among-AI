@@ -151,7 +151,7 @@ async def notifyNextToAns(interaction: discord.Interaction):
                 ai_model = game_state["hackers"][ai_name]
                 answer = await ai_model(analysis_input, game_state["analysis_prompt"], game_state["ans_prompt"])
                 # answer = "I am AI"
-                await interaction.channel.send("{}\n **{}**".format(cur_player, answer))
+                await interaction.channel.send("**{}**\n {}".format(cur_player, answer))
                 game_state["game_answers"][cur_player] = answer
                 game_state["cur_idx"] += 1
                 game_state["ai_prompts"][ai_name] = ai_model.prev_prompts

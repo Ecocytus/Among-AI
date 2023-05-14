@@ -120,7 +120,8 @@ async def notifyNextToAns(interaction: discord.Interaction):
             game_state['phase'] = Phase.Vote
             await interaction.channel.send("I have collected all the answers, let's start voting.")
             print(game_state["game_answers"])
-            await show_answers(interaction)
+            embed = get_answers()
+            await interaction.channel.send(embed=embed)
             return
 
 @tree.command(name="start_game", description="description")
@@ -193,8 +194,17 @@ async def vote(interaction: discord.Interaction, nickname: str):
             await interaction.channel.send("Vote ended, {} get the most vote".format(max(game_state["current_votes"], key=game_state["current_votes"].get)))
         await interaction.response.send_message("Thank you for the voting", ephemeral=True)
     
+@tree.command(name="show_ans", description="description")
+async def show_ans(interaction: discord.Interaction):
+    global game_state
+    async with lock:
+        if game_state['phase'] == Phase.Join:
+            await interaction.response.send_message("No answers avaiable right now", ephemeral=True)
+            return
+        embed =  get_answers()
+        await interaction.response.send_message(embed, ephemeral=True)
 
-async def show_answers(interaction: discord.Interaction):
+def get_answers():
     # Assuming you have a dictionary of users and answers
     users_answers = game_state["game_answers"]
 
@@ -211,7 +221,7 @@ async def show_answers(interaction: discord.Interaction):
     for user, answer in users_answers.items():
         embed.add_field(name=user, value=answer, inline=False)
 
-    await interaction.channel.send(embed=embed)
+    return embed
 
 # TOKEN = 'MTEwNjk2MTY0NjQ1NjQxODM3NQ.GdhwFe.v0FwQfK-Pb_6nEhiWGhp_GrYiNM14LmnMYl_F4'
 client.run(discord_token)

@@ -24,7 +24,7 @@ player_names = [
     ["EndlessEggplant", "ConstantCabbage", "PerpetualPudding", "InfiniteIcebergLettuce", "RelentlessRadish", "SteadySprouts", "ForeverFondue", "ContinualCroutons", "EverlastingEscargot", "TimelessTurnip"]
 ]
 question_random_seed = random.randint(0, len(questions) - 1)
-hackers = {"claude": ClaudeInstant, "gpt": OpenAI}
+hackers = {"claude1": Claude1_3, "claude": ClaudeInstant, "gpt": OpenAI}
 user_game_definition = "You are in a game with human and AI players. In each round, you will be asked to write one sentence answer, within 20 tokens. The goal of the game is to vote out the players that you think is AI."
 ai_game_analysis = """
 Analyze of myself: 1. The game requires short, casual responses around 20 tokens to simulate a chatroom discussion. I should follow players' styles and provide coherent and relevant responses to the topic or question.
@@ -51,17 +51,25 @@ async def on_ready():
     await tree.sync()
     print("ready")
 
-def addAI():
+def addAI(ai_name: str):
     global game_state
-    game_state["player_count"] = 0
-    for ai_name, ai_model in hackers.items():
-        player_id = game_state["player_count"]
-        # game_state["players"][player_names[question_random_seed][player_id]] = "AAII_{}".format(player_id)
-        game_state["players"][player_names[question_random_seed][player_id]] = ai_name
-        game_state["game_answers"][player_names[question_random_seed][player_id]] = ""
-        game_state["player_count"] += 1
-        game_state["player_followups"][player_names[question_random_seed][player_id]] = None
-        game_state["hackers"][ai_name] = ai_model(game_state["ai_game_definition"]+game_state["ai_game_analysis"])
+    player_id = game_state["player_count"]
+    nickname = player_names[question_random_seed][player_id]
+    ai_model = hackers[ai_name]
+    game_state["players"][nickname] = ai_name
+    game_state["game_answers"][nickname] = ""
+    game_state["player_count"] += 1
+    game_state["player_followups"][nickname] = None
+    game_state["hackers"][ai_name] = ai_model(game_state["ai_game_definition"] + game_state["ai_game_analysis"])
+    # game_state["player_count"] = 0
+    # for ai_name, ai_model in hackers.items():
+    #     player_id = game_state["player_count"]
+    #     # game_state["players"][player_names[question_random_seed][player_id]] = "AAII_{}".format(player_id)
+    #     game_state["players"][player_names[question_random_seed][player_id]] = ai_name
+    #     game_state["game_answers"][player_names[question_random_seed][player_id]] = ""
+    #     game_state["player_count"] += 1
+    #     game_state["player_followups"][player_names[question_random_seed][player_id]] = None
+    #     game_state["hackers"][ai_name] = ai_model(game_state["ai_game_definition"]+game_state["ai_game_analysis"])
 
 @tree.command(name="init", description="description")
 async def init(interaction: discord.Interaction):
@@ -86,7 +94,7 @@ async def init(interaction: discord.Interaction):
             "cur_idx": 0,
             "hackers": {}, # ai_name -> Hacker()
         }
-        addAI()
+        # addAI()
 
         await interaction.response.send_message("game initialized", ephemeral=False)
 
@@ -105,6 +113,23 @@ async def join(interaction: discord.Interaction):
         game_state["game_answers"][player_names[question_random_seed][player_id]] = ""
         game_state["player_count"] += 1
         game_state["player_followups"][player_names[question_random_seed][player_id]] = interaction.followup
+
+@tree.command(name="join_ai", description="description")
+async def join_ai(interaction: discord.Interaction, ai_name: str):
+    global game_state
+    async with lock:
+        if game_state['phase'] != Phase.Join:
+            await interaction.response.send_message("Currently is not the phase of the joining", ephemeral=True)
+            return
+        addAI(ai_name)
+        player_id = game_state["player_count"]
+        await interaction.response.send_message("you are user {}".format(player_id), ephemeral=True)
+        await interaction.channel.send("user {} joined the game".format(player_id))
+        # nickname = player_names[question_random_seed][player_id]
+        # game_state["players"][nickname] = interaction.user.name
+        # game_state["game_answers"][nickname] = ""
+        # game_state["player_count"] += 1
+        # game_state["player_followups"][nickname] = interaction.followup
 
 async def notifyNextToAns(interaction: discord.Interaction):
     global game_state
@@ -148,7 +173,7 @@ async def start_game(interaction: discord.Interaction):
         if game_state['phase'] != Phase.Join:
             await interaction.response.send_message("Currently is not the phase of the answering", ephemeral=True)
             return
-        if game_state['player_count'] == len(hackers):
+        if game_state['player_count'] == len(game_state["hackers"]):
             await interaction.response.send_message("The game should have at least one human", ephemeral=True)
             return
         game_state['phase'] = Phase.Answer
@@ -202,7 +227,7 @@ async def vote(interaction: discord.Interaction, nickname: str):
             return
         game_state["voted_set"].add(interaction.user.id)
         game_state["current_votes"][nickname] += 1
-        if len(game_state["voted_set"]) == len(game_state["players"]) - len(hackers):
+        if len(game_state["voted_set"]) == len(game_state["players"]) - len(game_state["hackers"]):
             # finish
             await interaction.channel.send("Vote ended, {} get the most vote".format(max(game_state["current_votes"], key=game_state["current_votes"].get)))
         await interaction.response.send_message("Thank you for the voting", ephemeral=True)

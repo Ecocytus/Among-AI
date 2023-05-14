@@ -6,6 +6,7 @@ import anthropic
 
 import asyncio
 from functools import wraps, partial
+from collections import defaultdict
 
 def async_wrap(func):
     @wraps(func)
@@ -18,7 +19,7 @@ def async_wrap(func):
 
 class Hacker:
     def __init__(self, game_definition: str):
-        self.prev_prompt = ""
+        self.prev_prompts = defaultdict(str)
         self.game_definition = game_definition
         
     # child class implements this
@@ -28,18 +29,20 @@ class Hacker:
     def analysis(self, input: str, prompt: str):
         analysis_prompt = self.game_definition + "\n" + input + "\n" + prompt
         analysis_answer = self.call(analysis_prompt)
-        self.prev_prompt += analysis_prompt + "\n" + analysis_answer
+        self.prev_prompts["analysis_prompt"] = analysis_prompt
+        self.prev_prompts["analysis_answer"] = analysis_answer
         print("[analysis prompt]\n" + analysis_prompt + "\n[analysis answer]\n" + analysis_answer)
         return analysis_answer
         
     def ans(self, input: str, prompt: str):
-        ans_prompt = self.prev_prompt + "\n" + prompt + "\n" + input
+        ans_prompt = "\n".join([self.prev_prompts["analysis_prompt"], self.prev_prompts["analysis_answer"], prompt, input])
         ans_answer = self.call(ans_prompt)
         print("[ans prompt]\n" + ans_prompt + "\n[ans answer]\n" + ans_answer)
         return ans_answer
 
     def complete(self, input: str, analysis_prompt: str, ans_prompt: str):
         analysis_answer = self.analysis(input, analysis_prompt)
+        # TODO: better name as nick_name(id of user)
         ans_answer = self.ans(input + "\nYou:", ans_prompt)
         return ans_answer
     
@@ -73,16 +76,32 @@ class OpenAI(Hacker):
         answer = response.choices[0].text.strip()
         return answer
 
-class Claude(Hacker):
+class Claude1_3(Hacker):
     def __init__(self, game_definition):
         super().__init__(game_definition)
         self.client = anthropic.Client(claude_key)
         
     def call(self, prompt):
-        prompt = '\n\nHuman: ${prompt}\n\nAssistant:'
+        prompt = f"{anthropic.HUMAN_PROMPT} {prompt}{anthropic.AI_PROMPT}"
         response = self.client.completion(
-            model="claude-v1",
+            model="claude-v1.3",
             prompt=prompt,
-            max_tokens_to_sample=50,
+            stop_sequences=[anthropic.HUMAN_PROMPT],
+            max_tokens_to_sample=150,
         )
-        return response['completion'].strip()
+        return response['completion'].strip() + anthropic.HUMAN_PROMPT
+    
+class ClaudeInstant(Hacker):
+    def __init__(self, game_definition):
+        super().__init__(game_definition)
+        self.client = anthropic.Client(claude_key)
+        
+    def call(self, prompt):
+        prompt = f"{anthropic.HUMAN_PROMPT} {prompt}{anthropic.AI_PROMPT}"
+        response = self.client.completion(
+            model="claude-instant-v1.1",
+            prompt=prompt,
+            stop_sequences=[anthropic.HUMAN_PROMPT],
+            max_tokens_to_sample=150,
+        )
+        return response['completion'].strip() + anthropic.HUMAN_PROMPT

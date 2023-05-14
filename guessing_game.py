@@ -8,12 +8,12 @@ from enum import Enum
 import time
 import asyncio
 
-from model import OpenAI, Claude
+from model import OpenAI, ClaudeInstant, Claude1_3
 from secret import discord_token
 
 questions = ["If you could have any superpower, but it had to be hilariously impractical, what would it be?",
              "Which animal would be the most annoying if it could talk?",
-             "If your pet could suddenly talk, what do you think they would say first?"
+             "If your pet could suddenly talk, what do you think they would say first?",
              "If you could have any object in the world, but it has to be rubber duck sized, what would it be?",
              "If you could only eat one food for the rest of your life, what would be the most hilarious choice?"]
 player_names = [
@@ -24,8 +24,14 @@ player_names = [
     ["EndlessEggplant", "ConstantCabbage", "PerpetualPudding", "InfiniteIcebergLettuce", "RelentlessRadish", "SteadySprouts", "ForeverFondue", "ContinualCroutons", "EverlastingEscargot", "TimelessTurnip"]
 ]
 question_random_seed = random.randint(0, len(questions) - 1)
-hackers = {"claude": Claude, "gpt": OpenAI}
+hackers = {"claude": ClaudeInstant, "gpt": OpenAI}
 user_game_definition = "You are in a game with human and AI players. In each round, you will be asked to write one sentence answer, within 20 tokens. The goal of the game is to vote out the players that you think is AI."
+ai_game_analysis = """
+Analyze of myself: 1. The game requires short, casual responses around 20 tokens to simulate a chatroom discussion. I should follow players' styles and provide coherent and relevant responses to the topic or question.
+2. The players likely have different personalities, backgrounds and writing styles. Some may use simple language while others complex. Some emotional while others logical. I need to adapt to the styles and tones of previous responses to appear human.
+3. The content and topics can be on anything. I have to first understand the context, emotions and opinions expressed to give an appropriate response. My knowledge and language generation ability will be tested.
+4. Although cue to their response are recommended, I must firstly answer the question provided, not the questions from other palyers.
+"""
 ai_game_definition = "You are in a game that chats with each other in rounds. In each round, you will be asked to write one sentence answer, within 20 tokens. There are other gamers in the chatroom; you must prevent yourself from being recognized as a language model. You will be given the answers of other players first, so you should follow their wording style, token length, and content to win the game."
 analysis_prompt = "Firstly, analyze the person's personality above and their wording style."
 ans_prompt = "Continue the conversation. You want to mimic others' personalities and wording styles to hide the nature that you are an AI. Do not reply with other uncorrelated information."
@@ -55,7 +61,7 @@ def addAI():
         game_state["game_answers"][player_names[question_random_seed][player_id]] = ""
         game_state["player_count"] += 1
         game_state["player_followups"][player_names[question_random_seed][player_id]] = None
-        game_state["hackers"][ai_name] = ai_model(game_state["ai_game_definition"])
+        game_state["hackers"][ai_name] = ai_model(game_state["ai_game_definition"]+game_state["ai_game_analysis"])
 
 @tree.command(name="init", description="description")
 async def init(interaction: discord.Interaction):
@@ -70,6 +76,7 @@ async def init(interaction: discord.Interaction):
             "player_followups": {}, # nickname -> followup
             "voted_set": set(),
             "user_game_definition": user_game_definition,
+            "ai_game_analysis": ai_game_analysis,
             "ai_game_definition": ai_game_definition,
             "analysis_prompt": analysis_prompt,
             "ans_prompt": ans_prompt,

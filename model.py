@@ -23,12 +23,12 @@ class Hacker:
         self.game_definition = game_definition
         
     # child class implements this
-    def call(self, prompt):
+    def call(self, prompt, internal=False):
         pass
     
     def analysis(self, input: str, prompt: str):
         analysis_prompt = self.game_definition + "\n" + input + "\n" + prompt
-        analysis_answer = self.call(analysis_prompt)
+        analysis_answer = self.call(analysis_prompt, internal=True)
         self.prev_prompts["analysis_prompt"] = analysis_prompt
         self.prev_prompts["analysis_answer"] = analysis_answer
         print("[analysis prompt]\n" + analysis_prompt + "\n[analysis answer]\n" + analysis_answer)
@@ -36,7 +36,7 @@ class Hacker:
         
     def ans(self, input: str, prompt: str):
         ans_prompt = "\n".join([self.prev_prompts["analysis_prompt"], self.prev_prompts["analysis_answer"], prompt, input])
-        ans_answer = self.call(ans_prompt)
+        ans_answer = self.call(ans_prompt, internal=False)
         print("[ans prompt]\n" + ans_prompt + "\n[ans answer]\n" + ans_answer)
         return ans_answer
 
@@ -63,7 +63,7 @@ class OpenAI(Hacker):
         openai.org = openai_org
         openai.api_key = openai_key
         
-    def call(self, prompt):
+    def call(self, prompt, internal=False):
         response = openai.Completion.create(
             engine="text-davinci-003",
             prompt=prompt,
@@ -81,7 +81,7 @@ class Claude1_3(Hacker):
         super().__init__(game_definition)
         self.client = anthropic.Client(claude_key)
         
-    def call(self, prompt):
+    def call(self, prompt, internal=False):
         prompt = f"{anthropic.HUMAN_PROMPT} {prompt}{anthropic.AI_PROMPT}"
         response = self.client.completion(
             model="claude-v1.3",
@@ -89,14 +89,17 @@ class Claude1_3(Hacker):
             stop_sequences=[anthropic.HUMAN_PROMPT],
             max_tokens_to_sample=150,
         )
-        return response['completion'].strip() + anthropic.HUMAN_PROMPT
+        res = response['completion'].strip()
+        if internal:
+            res += anthropic.HUMAN_PROMPT
+        return res
     
 class ClaudeInstant(Hacker):
     def __init__(self, game_definition):
         super().__init__(game_definition)
         self.client = anthropic.Client(claude_key)
         
-    def call(self, prompt):
+    def call(self, prompt, internal=False):
         prompt = f"{anthropic.HUMAN_PROMPT} {prompt}{anthropic.AI_PROMPT}"
         response = self.client.completion(
             model="claude-instant-v1.1",
@@ -104,4 +107,7 @@ class ClaudeInstant(Hacker):
             stop_sequences=[anthropic.HUMAN_PROMPT],
             max_tokens_to_sample=150,
         )
-        return response['completion'].strip() + anthropic.HUMAN_PROMPT
+        res = response['completion'].strip()
+        if internal:
+            res += anthropic.HUMAN_PROMPT
+        return res

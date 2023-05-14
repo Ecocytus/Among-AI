@@ -8,7 +8,7 @@ from enum import Enum
 import time
 import asyncio
 
-from model import OpenAI, ClaudeInstant, Claude1_3
+from model import OpenAI, ClaudeInstant, Claude1_3, GPT
 from secret import discord_token
 
 questions = ["If you could have any superpower, but it had to be hilariously impractical, what would it be?",
@@ -24,7 +24,7 @@ player_names = [
     ["EndlessEggplant", "ConstantCabbage", "PerpetualPudding", "InfiniteIcebergLettuce", "RelentlessRadish", "SteadySprouts", "ForeverFondue", "ContinualCroutons", "EverlastingEscargot", "TimelessTurnip"]
 ]
 question_random_seed = random.randint(0, len(questions) - 1)
-hackers = {"claude1": Claude1_3, "claude": ClaudeInstant, "gpt": OpenAI}
+hackers = {"claude1": Claude1_3, "claude": ClaudeInstant, "gpt": OpenAI, "gpt4": GPT}
 user_game_definition = "You are in a game with human and AI players. In each round, you will be asked to write one sentence answer, within 20 tokens. The goal of the game is to vote out the players that you think is AI."
 ai_game_analysis = """
 1. The game requires short, casual responses around 20 tokens to simulate a chatroom discussion. I should follow players' styles and provide coherent and relevant responses to the topic or question.

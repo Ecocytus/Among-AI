@@ -27,14 +27,14 @@ question_random_seed = random.randint(0, len(questions) - 1)
 hackers = {"claude1": Claude1_3, "claude": ClaudeInstant, "gpt": OpenAI}
 user_game_definition = "You are in a game with human and AI players. In each round, you will be asked to write one sentence answer, within 20 tokens. The goal of the game is to vote out the players that you think is AI."
 ai_game_analysis = """
-Analyze of myself: 1. The game requires short, casual responses around 20 tokens to simulate a chatroom discussion. I should follow players' styles and provide coherent and relevant responses to the topic or question.
+1. The game requires short, casual responses around 20 tokens to simulate a chatroom discussion. I should follow players' styles and provide coherent and relevant responses to the topic or question.
 2. The players likely have different personalities, backgrounds and writing styles. Some may use simple language while others complex. Some emotional while others logical. I need to adapt to the styles and tones of previous responses to appear human.
 3. The content and topics can be on anything. I have to first understand the context, emotions and opinions expressed to give an appropriate response. My knowledge and language generation ability will be tested.
 4. Although cue to their response are recommended, I must firstly answer the question provided, not the questions from other palyers.
 """
 ai_game_definition = "You are in a game that chats with each other in rounds. In each round, you will be asked to write one sentence answer, within 20 tokens. There are other gamers in the chatroom; you must prevent yourself from being recognized as a language model. You will be given the answers of other players first, so you should follow their wording style, token length, and content to win the game."
 analysis_prompt = "Firstly, analyze the person's personality above and their wording style."
-ans_prompt = "Continue the conversation. You want to mimic others' personalities and wording styles to hide the nature that you are an AI. Do not reply with other uncorrelated information."
+ans_prompt = "Continue the conversation. You want to mimic others' personalities and wording styles to hide the nature that you are an AI. Answer in less than 20 words, no explanation needed."
 intents = discord.Intents.all() 
 client = discord.Client(intents=intents)
 tree = discord.app_commands.CommandTree(client)
@@ -141,12 +141,12 @@ async def notifyNextToAns(interaction: discord.Interaction):
             if game_state["players"][cur_player] in game_state["hackers"].keys():
                 # await interaction.response.send_message("{}, it's your turn".format(cur_player))
                 # fake the turns and pass to the next
-                time.sleep(2)
-                analysis_input = game_state["game_question"]
-                for player_nickname, player_answer in game_state["game_answers"].items():
+                # time.sleep(2)
+                analysis_input = "Question: " + game_state["game_question"]
+                for i, (player_nickname, player_answer) in enumerate(game_state["game_answers"].items()):
                     if player_answer == "":
                         continue
-                    analysis_input += "\n{}: {}".format(player_nickname, player_answer)
+                    analysis_input += "\nUser {} [nickname: {}] answers {}".format(i, player_nickname, player_answer)
                 ai_name = game_state["players"][cur_player]
                 ai_model = game_state["hackers"][ai_name]
                 answer = await ai_model(analysis_input, game_state["analysis_prompt"], game_state["ans_prompt"])

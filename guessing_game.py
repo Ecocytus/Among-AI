@@ -86,6 +86,7 @@ async def init(interaction: discord.Interaction):
             "user_game_definition": user_game_definition,
             "ai_game_analysis": ai_game_analysis,
             "ai_game_definition": ai_game_definition,
+            "ai_prompts": {}, # ai_name -> dict of prompts
             "analysis_prompt": analysis_prompt,
             "ans_prompt": ans_prompt,
             "game_question": questions[question_random_seed],
@@ -150,9 +151,10 @@ async def notifyNextToAns(interaction: discord.Interaction):
                 ai_model = game_state["hackers"][ai_name]
                 answer = await ai_model(analysis_input, game_state["analysis_prompt"], game_state["ans_prompt"])
                 # answer = "I am AI"
-                await interaction.channel.send("{} give answer: {}".format(cur_player, answer))
+                await interaction.channel.send("{}\n **{}**".format(cur_player, answer))
                 game_state["game_answers"][cur_player] = answer
                 game_state["cur_idx"] += 1
+                game_state["ai_prompts"][ai_name] = ai_model.prev_prompts
             else:
                 await game_state["player_followups"][cur_player].send("It's your turn", ephemeral=True)
                 return
@@ -229,7 +231,12 @@ async def vote(interaction: discord.Interaction, nickname: str):
         game_state["current_votes"][nickname] += 1
         if len(game_state["voted_set"]) == len(game_state["players"]) - len(game_state["hackers"]):
             # finish
-            await interaction.channel.send("Vote ended, {} get the most vote".format(max(game_state["current_votes"], key=game_state["current_votes"].get)))
+            loser = max(game_state["current_votes"], key=game_state["current_votes"].get)
+            if game_state["players"][loser] in game_state["hackers"].keys():
+                # ai lose
+                await interaction.channel.send("AI **{}** are caught, congratulations!".format(loser))
+            else:
+                await interaction.channel.send("AhHa, {} [**{}**] are more like AI".format(game_state["player"][loser], loser))
         await interaction.response.send_message("Thank you for the voting", ephemeral=True)
     
 @tree.command(name="show_ans", description="description")
@@ -241,6 +248,54 @@ async def show_ans(interaction: discord.Interaction):
             return
         embed = get_answers()
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+@tree.command(name="view_ai", description="description")
+async def view_ai(interaction: discord.Interaction, ai_name: str):
+    global game_state
+    async with lock:
+        ai_prompts = game_state["ai_prompts"][ai_name]
+        for key, prompt in ai_prompts.items():
+            print("################")
+            print("key", key)
+            print("prompt", prompt)
+
+        # embed = discord.Embed(
+        #     title = f'Prompts from {ai_name}',
+        #     color = discord.Color.red() # You can customize the color
+        # )
+
+        # # embed.add_field(name="Question", value=game_state["game_question"], inline=False)
+        # # Add each user's answer to the Embed
+        # for key, prompt in ai_prompts.items():
+        #     embed.add_field(name=key, value=prompt, inline=False)
+        await interaction.response.send_message("sent")
+            
+        
+# def get_answers():
+#     # Assuming you have a dictionary of users and answers
+#     players_answers = game_state["game_answers"]
+
+#     # Create an Embed
+#     embed = discord.Embed(
+#         title = 'Summary',
+#         color = discord.Color.blue() # You can customize the color
+#     )
+
+#     embed.add_field(name="Question", value=game_state["game_question"], inline=False)
+
+#     ai_prompts = game_state["ai_prompts"]
+
+#     # Add each user's answer and analysis to the Embed
+#     field_value = ""
+#     for player, answer in players_answers.items():
+#         ai_name = game_state["players"][player]
+#         # print(ai_name, ai_prompts[ai_name])
+#         prompts = "" if ai_name not in ai_prompts else ai_prompts[ai_name]["analysis_prompt"]
+#         field_value += f"**{player}**\nAnswer: {answer}\nAnalysis: {prompts}\n\n"
+
+#     embed.add_field(name="User - Answer - Pompts", value=field_value, inline=False)
+
+#     return embed
 
 def get_answers():
     # Assuming you have a dictionary of users and answers

@@ -36,7 +36,9 @@ class Hacker:
         
     def ans(self, input: str, prompt: str):
         ans_prompt = "\n".join([self.prev_prompts["analysis_prompt"], self.prev_prompts["analysis_answer"], prompt, input])
+        self.prev_prompts["ans_prompt"] = ans_prompt
         ans_answer = self.call(ans_prompt, internal=False)
+        self.prev_prompts["ans_answer"] = ans_answer
         print("[ans prompt]\n" + ans_prompt + "\n[ans answer]\n" + ans_answer)
         return ans_answer
 
@@ -67,7 +69,7 @@ class OpenAI(Hacker):
         response = openai.Completion.create(
             engine="text-davinci-003",
             prompt=prompt,
-            max_tokens=50,
+            max_tokens=150,
             temperature=1,
             top_p=1,
             n=1,

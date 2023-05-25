@@ -12,31 +12,11 @@ import discord
 import discord.ext
 from discord import app_commands,SelectOption
 from discord.app_commands import Choice
+from prompts import questions, player_names, user_game_definition, ai_game_analysis, ai_game_definition, analysis_prompt, ans_prompt
 
-questions = ["If you could have any superpower, but it had to be hilariously impractical, what would it be?",
-             "Which animal would be the most annoying if it could talk?",
-             "If your pet could suddenly talk, what do you think they would say first?",
-             "If you could have any object in the world, but it has to be rubber duck sized, what would it be?",
-             "If you could only eat one food for the rest of your life, what would be the most hilarious choice?"]
-player_names = [
-    ["The Invisible Pigeon Whisperer", "Lunchtime Time Traveler", "Deja Vu Deleter", "Anti-Gravity Marshmallow Man", "Tickle Transmitter", "Infinite Spaghetti Spawner", "Self-Cleaning Sock Summoner", "Awkward Silence Amplifier", "Procrastination Propagator", "Unicorn Unicyclist"],
-    ["Blabbering Baboon", "Chatty Cheetah", "Grumbling Grizzly", "Yakking Yak", "Nagging Numbat", "Bickering Bison", "Gossipy Goose", "Prattling Penguin", "Tattletale Toucan", "Whingeing Walrus"],
-    ["FeedMeFido", "BellyRubBuddy", "SquirrelSpotter", "MailmanMauler", "CouchCrasher", "ShoeChewer", "WalkWisher", "CatChaser", "TreatTracker", "BedHogger"],
-    ["RubberDuckRuby", "DinkyDiamond", "TeenyTesla", "PocketPorsche", "MinusculeMansion", "LilliputianLaptop", "PetitePicasso", "PunyPyramids", "BittyBigBen", "WeeWindsorCastle"],
-    ["EndlessEggplant", "ConstantCabbage", "PerpetualPudding", "InfiniteIcebergLettuce", "RelentlessRadish", "SteadySprouts", "ForeverFondue", "ContinualCroutons", "EverlastingEscargot", "TimelessTurnip"]
-]
 question_random_seed = random.randint(0, len(questions) - 1)
-hackers = {"claude1": Claude1_3, "claude": ClaudeInstant, "gpt": OpenAI, "gpt4": GPT}
-user_game_definition = "You are in a game with human and AI players. In each round, you will be asked to write one sentence answer, within 20 tokens. The goal of the game is to vote out the players that you think is AI."
-ai_game_analysis = """
-1. The game requires short, casual responses around 20 tokens to simulate a chatroom discussion. I should follow players' styles and provide coherent and relevant responses to the topic or question.
-2. The players likely have different personalities, backgrounds and writing styles. Some may use simple language while others complex. Some emotional while others logical. I need to adapt to the styles and tones of previous responses to appear human.
-3. The content and topics can be on anything. I have to first understand the context, emotions and opinions expressed to give an appropriate response. My knowledge and language generation ability will be tested.
-4. Although cue to their response are recommended, I must firstly answer the question provided, not the questions from other palyers.
-"""
-ai_game_definition = "You are in a game that chats with each other in rounds. In each round, you will be asked to write one sentence answer, within 20 tokens. There are other gamers in the chatroom; you must prevent yourself from being recognized as a language model. You will be given the answers of other players first, so you should follow their wording style, token length, and content to win the game."
-analysis_prompt = "Firstly, analyze the person's personality above and their wording style."
-ans_prompt = "Continue the conversation. You want to mimic others' personalities and wording styles to hide the nature that you are an AI. Answer in less than 20 words, no explanation needed."
+hackers = {"Claude1.3": Claude1_3, "ClaudeInstant": ClaudeInstant, "gpt3.5": OpenAI, "gpt4": GPT}
+
 intents = discord.Intents.all() 
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
@@ -68,7 +48,9 @@ def init_game_state():
         "cur_idx": 0,
         "hackers": {}, # ai_name -> Hacker()
     }
+
 lock = asyncio.Lock()
+init_game_state()
 
 @client.event
 async def on_ready():
@@ -85,23 +67,12 @@ def addAI(ai_name: str):
     game_state["player_count"] += 1
     game_state["player_followups"][nickname] = None
     game_state["hackers"][ai_name] = ai_model(game_state["ai_game_definition"] + game_state["ai_game_analysis"])
-    # game_state["player_count"] = 0
-    # for ai_name, ai_model in hackers.items():
-    #     player_id = game_state["player_count"]
-    #     # game_state["players"][player_names[question_random_seed][player_id]] = "AAII_{}".format(player_id)
-    #     game_state["players"][player_names[question_random_seed][player_id]] = ai_name
-    #     game_state["game_answers"][player_names[question_random_seed][player_id]] = ""
-    #     game_state["player_count"] += 1
-    #     game_state["player_followups"][player_names[question_random_seed][player_id]] = None
-    #     game_state["hackers"][ai_name] = ai_model(game_state["ai_game_definition"]+game_state["ai_game_analysis"])
 
 @tree.command(name="init", description="description")
 async def init(interaction: discord.Interaction):
     global game_state
     async with lock:
         init_game_state()
-        # addAI()
-
         await interaction.response.send_message("game initialized", ephemeral=False)
 
 
@@ -135,11 +106,6 @@ async def join_ai(interaction: discord.Interaction, ai_name: Choice[str]):
         player_id = game_state["player_count"]
         await interaction.response.send_message("Successfully added an AI.".format(player_id), silent=True)
         await interaction.channel.send("user {} joined the game".format(player_id))
-        # nickname = player_names[question_random_seed][player_id]
-        # game_state["players"][nickname] = interaction.user.name
-        # game_state["game_answers"][nickname] = ""
-        # game_state["player_count"] += 1
-        # game_state["player_followups"][nickname] = interaction.followup
 
 async def notifyNextToAns(interaction: discord.Interaction):
     global game_state
@@ -159,13 +125,16 @@ async def notifyNextToAns(interaction: discord.Interaction):
                 ai_model = game_state["hackers"][ai_name]
                 answer = await ai_model(analysis_input, game_state["analysis_prompt"], game_state["ans_prompt"])
 
-                await interaction.channel.send("**{}**\n {}".format(cur_player, answer))
+                # await interaction.channel.send("**{}**\n {}".format(cur_player, answer))
+                await interaction.channel.send(embed=create_answer(cur_player, answer))
                 game_state["game_answers"][cur_player] = answer
                 game_state["cur_idx"] += 1
                 game_state["ai_prompts"][ai_name] = ai_model.prev_prompts
             else:
                 q = game_state["game_question"]
-                await game_state["player_followups"][cur_player].send(f"It's your turn.\nQuestion is: **{q}**\n\nYou can answer with command:\n **/ans YOUR_ANS**", ephemeral=True)
+                embed = get_answers()
+                await game_state["player_followups"][cur_player].send(embed=embed, ephemeral=True)
+                await game_state["player_followups"][cur_player].send(f"It's your turn **{cur_player}**.\nYou can answer with command:\n **/ans YOUR_ANS**", ephemeral=True)
                 return
             
         if game_state["cur_idx"] == len(game_state["players"]):
@@ -208,10 +177,9 @@ async def start_game(interaction: discord.Interaction):
             await interaction.response.send_message("The game should have at least one human", ephemeral=True)
             return
         game_state['phase'] = Phase.Answer
+        await interaction.response.send_message("Game started!", ephemeral=False)
         await interaction.channel.send(game_state["user_game_definition"])
-        await interaction.channel.send("**" + game_state["game_question"] + "**")
-        await interaction.channel.send("\nThere are {} players in total.".format(game_state["player_count"]))
-        await interaction.response.send_message("Let's start the game", ephemeral=False)
+        await interaction.channel.send("Question: **{}**".format(game_state["game_question"]))
         tmp = list(game_state["players"].keys())
         shuffle(tmp)
         game_state["order_list"] = tmp
@@ -240,8 +208,6 @@ async def ans(interaction: discord.Interaction, answer: str):
 
     await notifyNextToAns(interaction)
     
-
-
 # @tree.command(name="vote", description="description")
 async def vote(interaction: discord.Interaction, nickname: str):
     global game_state
@@ -288,43 +254,15 @@ async def view_ai(interaction: discord.Interaction, ai_name: str):
             print("key", key)
             print("prompt", prompt)
 
-        # embed = discord.Embed(
-        #     title = f'Prompts from {ai_name}',
-        #     color = discord.Color.red() # You can customize the color
-        # )
-
-        # # embed.add_field(name="Question", value=game_state["game_question"], inline=False)
-        # # Add each user's answer to the Embed
-        # for key, prompt in ai_prompts.items():
-        #     embed.add_field(name=key, value=prompt, inline=False)
         await interaction.response.send_message("sent")
-            
-        
-# def get_answers():
-#     # Assuming you have a dictionary of users and answers
-#     players_answers = game_state["game_answers"]
 
-#     # Create an Embed
-#     embed = discord.Embed(
-#         title = 'Summary',
-#         color = discord.Color.blue() # You can customize the color
-#     )
-
-#     embed.add_field(name="Question", value=game_state["game_question"], inline=False)
-
-#     ai_prompts = game_state["ai_prompts"]
-
-#     # Add each user's answer and analysis to the Embed
-#     field_value = ""
-#     for player, answer in players_answers.items():
-#         ai_name = game_state["players"][player]
-#         # print(ai_name, ai_prompts[ai_name])
-#         prompts = "" if ai_name not in ai_prompts else ai_prompts[ai_name]["analysis_prompt"]
-#         field_value += f"**{player}**\nAnswer: {answer}\nAnalysis: {prompts}\n\n"
-
-#     embed.add_field(name="User - Answer - Pompts", value=field_value, inline=False)
-
-#     return embed
+def create_answer(username, answer):
+    embed = discord.Embed(
+        title = '',
+        color = discord.Color.blue() # You can customize the color
+    )
+    embed.add_field(name=f"**{username}**", value=answer, inline=False)
+    return embed
 
 def get_answers():
     # Assuming you have a dictionary of users and answers
@@ -335,14 +273,14 @@ def get_answers():
         title = 'Summary',
         color = discord.Color.blue() # You can customize the color
     )
-
     embed.add_field(name="Question", value=game_state["game_question"], inline=False)
 
     # Add each user's answer to the Embed
     for user, answer in users_answers.items():
+        if answer == "":
+            answer = "-------------"
         embed.add_field(name=user, value=answer, inline=False)
 
     return embed
 
-# TOKEN = 'MTEwNjk2MTY0NjQ1NjQxODM3NQ.GdhwFe.v0FwQfK-Pb_6nEhiWGhp_GrYiNM14LmnMYl_F4'
 client.run(discord_token)

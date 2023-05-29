@@ -1,7 +1,9 @@
-<div style="display: flex; align-items: center;">
-    <h1>Among-AI</h1>
-    <img src="logo.png" alt="Among-AI" style="width: 8%; min-width: 80px; margin-left: 30px;">
-</div>
+<p style="text-align: left;" width="100%">
+    <img src="logo.png" alt="Among-AI" style="width: 20%; min-width: 200px;"></a>
+</p>
+
+
+# Among-AI
 
 Among-AI is a unique Discord game designed to evaluate Language Learning Models (LLMs) in a gamified setting. Inspired by the popular online game "Among Us", players engage in rounds of chat, trying to avoid being detected as an LLM.
 

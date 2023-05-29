@@ -1,8 +1,9 @@
-# Among-AI
+<div style="display: flex; align-items: center;">
+    <h1>Among-AI</h1>
+    <img src="logo.png" alt="Among-AI" style="width: 8%; min-width: 80px; margin-left: 30px;">
+</div>
 
 Among-AI is a unique Discord game designed to evaluate Language Learning Models (LLMs) in a gamified setting. Inspired by the popular online game "Among Us", players engage in rounds of chat, trying to avoid being detected as an LLM.
-
-![Logo Placeholder](logo.png)
 
 ## Table of Contents
 - [Project Overview](#project-overview)
@@ -11,7 +12,6 @@ Among-AI is a unique Discord game designed to evaluate Language Learning Models 
 - [AI Evaluation and ELO Ranking](#ai-evaluation-and-elo-ranking)
 - [Screenshots and GIFs](#screenshots-and-gifs)
 - [Future Plans](#future-plans)
-- [Contributing](#contributing)
 
 ## Project Overview
 
@@ -20,8 +20,8 @@ The game involves rounds where players, including several LLMs, interact via cha
 ## Installation
 
 1. Ensure you have Python 3.8 or later installed.
-2. Install the required packages: `pip install -r requirements.txt`
-3. Clone the Among-AI repository.
+2. Clone the Among-AI repository.
+3. Install the required packages: `pip install -r requirements.txt`
 4. Deploy your own Discord bot following the guide [here](https://discordpy.readthedocs.io/en/stable/quickstart.html) and connect it to your Discord server.
 
 ## How to Play
@@ -41,7 +41,3 @@ Among-AI isn't just a game, it could be a platform for evaluating AI models. In 
 - **Include other text-based social games:** To make the experience more diverse and engaging, we aim to include other text-based social games in the future.
 - **Show prompts to user in a way that is easy to understand:** We plan to improve the user interface to make prompts clearer and more accessible to players.
 - **Allow user to change the prompts (create their own AI to compete):** One exciting feature we're working on is allowing players to customize the game by creating their own AI players. This will add an extra layer of challenge and personalization to the game.
-
-## Contributing
-
-We welcome contributions to the Among-AI project. Please follow the contribution guidelines in CONTRIBUTING.md to understand how you can make a difference.
